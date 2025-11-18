@@ -119,6 +119,20 @@ function whoisLookup(domain) {
 }
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const formatDuration = (ms) => {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const parts = [
+    String(hours).padStart(2, '0'),
+    String(minutes).padStart(2, '0'),
+    String(seconds).padStart(2, '0'),
+  ];
+
+  return `${parts[0]}h ${parts[1]}m ${parts[2]}s`;
+};
 
 async function run() {
   let config;
@@ -134,6 +148,7 @@ async function run() {
   const availableDomains = [];
   let checked = 0;
   let taken = 0;
+  const startTime = Date.now();
 
   console.log(chalk.blue(`Checking ${domainLength}-character .de domains with prefix="${prefix}" and suffix="${suffix}"`));
   console.log(chalk.blue(`Delay between lookups: ${intervalMs}ms`));
@@ -164,12 +179,14 @@ async function run() {
   }
 
   const availableCount = availableDomains.length;
+  const durationMs = Date.now() - startTime;
 
   console.log('\n' + chalk.bold('Summary'));
   console.log(`Checked: ${checked}`);
   console.log(`Taken: ${taken}`);
   console.log(`Available: ${availableCount}`);
   console.log(`Available domains: ${availableCount ? availableDomains.join(', ') : 'None'}`);
+  console.log(`Runtime: ${formatDuration(durationMs)}`);
 }
 
 run().catch((err) => {

@@ -59,4 +59,5 @@ Checked: 468
 Taken: 467
 Available: 1
 Available domains: glhf.de
+Runtime: 00h 15m 34s
 ```
