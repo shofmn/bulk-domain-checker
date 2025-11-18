@@ -28,6 +28,7 @@ cp config.example.json config.json
 | `prefix` | string | Lowercase letters that must appear at the start. |
 | `suffix` | string | Lowercase letters that must appear at the end. |
 | `intervalMs` | integer (optional) | Delay between lookups in ms. Defaults to 500. |
+| `topLevelDomain` | `"de"`, `"net"`, `"eu"`, or `"com"` | Which TLD to test. Defaults to `"de"`. |
 
 Constraints:
 - Only lowercase `a-z` characters are allowed for prefix/suffix.
@@ -41,7 +42,8 @@ Example:
   "length": 4,
   "prefix": "gl",
   "suffix": "",
-  "intervalMs": 500
+  "intervalMs": 500,
+  "topLevelDomain": "de"
 }
 ```
 
@@ -50,6 +52,8 @@ Example:
 ```bash
 npm start
 ```
+
+`whois.denic.de` is used for `.de` domains (a domain is free when the response contains `Status: free`). For `.net` and `.com`, the checker queries `whois.verisign-grs.com` and treats any response containing `No match` as available. For `.eu`, the checker uses `whois.eu` and considers domains with `Status: AVAILABLE` to be free.
 
 For each generated domain the app prints either `AVAILABLE` (green) or `TAKEN` (red) and, once the list is exhausted, a summary:
 

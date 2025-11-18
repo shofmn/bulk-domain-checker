@@ -9,6 +9,7 @@ const MIN_LENGTH = 2;
 const MAX_LENGTH = 63;
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz';
 const DEFAULT_INTERVAL_MS = 500;
+const SUPPORTED_TLDS = new Set(['de', 'net', 'eu', 'com']);
 
 function readConfig() {
   if (!fs.existsSync(CONFIG_FILE)) {
@@ -40,11 +41,17 @@ function readConfig() {
     throw new Error('intervalMs must be a non-negative number of milliseconds when provided.');
   }
 
+  const tld = String(parsed.topLevelDomain ?? 'de').toLowerCase();
+  if (!SUPPORTED_TLDS.has(tld)) {
+    throw new Error(`topLevelDomain must be one of: ${Array.from(SUPPORTED_TLDS).join(', ')}`);
+  }
+
   return {
     domainLength,
     prefix,
     suffix,
     intervalMs: interval,
+    topLevelDomain: tld,
   };
 }
 
@@ -84,9 +91,9 @@ function* domainGenerator(length, prefix, suffix) {
   }
 }
 
-function whoisLookup(domain) {
+function whoisLookup(fqdn, provider) {
   return new Promise((resolve, reject) => {
-    const proc = spawn('whois', ['-h', 'whois.denic.de', `${domain}.de`]);
+    const proc = spawn('whois', ['-h', provider.host, fqdn]);
     let stdout = '';
     let stderr = '';
 
@@ -107,15 +114,41 @@ function whoisLookup(domain) {
         return reject(new Error(stderr.trim()));
       }
 
-      const statusMatch = stdout.match(/Status:\s*(\w+)/i);
-      if (!statusMatch) {
-        return resolve({ available: false, raw: stdout });
-      }
-
-      const available = statusMatch[1].toLowerCase() === 'free';
+      const available = provider.isAvailable(stdout);
       resolve({ available, raw: stdout });
     });
   });
+}
+
+function getWhoisProvider(tld) {
+  if (tld === 'de') {
+    return {
+      host: 'whois.denic.de',
+      isAvailable: (output) => {
+        const statusMatch = output.match(/Status:\s*(\w+)/i);
+        return statusMatch ? statusMatch[1].toLowerCase() === 'free' : false;
+      },
+    };
+  }
+
+  if (tld === 'net' || tld === 'com') {
+    return {
+      host: 'whois.verisign-grs.com',
+      isAvailable: (output) => /no match/i.test(output),
+    };
+  }
+
+  if (tld === 'eu') {
+    return {
+      host: 'whois.eu',
+      isAvailable: (output) => {
+        const statusMatch = output.match(/Status:\s*(\w+)/i);
+        return statusMatch ? statusMatch[1].toLowerCase() === 'available' : false;
+      },
+    };
+  }
+
+  throw new Error(`Unsupported TLD: ${tld}`);
 }
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -143,14 +176,15 @@ async function run() {
     process.exit(1);
   }
 
-  const { domainLength, prefix, suffix, intervalMs } = config;
+  const { domainLength, prefix, suffix, intervalMs, topLevelDomain } = config;
   const generator = domainGenerator(domainLength, prefix, suffix);
   const availableDomains = [];
   let checked = 0;
   let taken = 0;
   const startTime = Date.now();
+  const whoisProvider = getWhoisProvider(topLevelDomain);
 
-  console.log(chalk.blue(`Checking ${domainLength}-character .de domains with prefix="${prefix}" and suffix="${suffix}"`));
+  console.log(chalk.blue(`Checking ${domainLength}-character .${topLevelDomain} domains with prefix="${prefix}" and suffix="${suffix}"`));
   console.log(chalk.blue(`Delay between lookups: ${intervalMs}ms`));
 
   for (const domain of generator) {
@@ -158,10 +192,10 @@ async function run() {
       await delay(intervalMs);
     }
 
-    const fqdn = `${domain}.de`;
+    const fqdn = `${domain}.${topLevelDomain}`;
     let result;
     try {
-      result = await whoisLookup(domain);
+      result = await whoisLookup(fqdn, whoisProvider);
     } catch (err) {
       console.error(chalk.red(`Error checking ${fqdn}: ${err.message}`));
       continue;
