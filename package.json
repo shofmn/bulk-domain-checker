@@ -1,0 +1,24 @@
+{
+  "name": "de-domain-checker",
+  "version": "1.0.0",
+  "description": "Simple CLI to bulk-check .de domain availability via DENIC whois",
+  "type": "module",
+  "bin": {
+    "de-domain-checker": "src/index.js"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "domain",
+    "whois",
+    ".de",
+    "denic"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0"
+  }
+}
