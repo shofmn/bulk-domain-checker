@@ -4,7 +4,7 @@ Simple Node.js terminal app to bulk-check `.de`, `.net`, `.eu`, and `.com` domai
 
 ## Prerequisites
 
-- Node.js 18+ (tested with v24.x)
+- Node.js 24+
 - `whois` binary available in your shell (macOS and most Linux distros include it)
 
 ## Setup
